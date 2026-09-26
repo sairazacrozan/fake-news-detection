@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flask
+instance/
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# Dataset files
+dataset/Fake.csv
+dataset/True.csv
+dataset/news.csv
+dataset/cleaned_news.csv
+dataset/preprocessed_news.csv

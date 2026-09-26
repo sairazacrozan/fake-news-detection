@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detection System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="icon">📰</span>
+                <div>
+                    <h1>Fake News Detector</h1>
+                    <p class="subtitle">AI & NLP Powered News Verification</p>
+                </div>
+            </div>
+            <div class="badge">College Project</div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Input Section -->
+        <section class="card input-card">
+            <h2>Analyze News Content</h2>
+            <p class="instructions">Paste the news headline or article body below to verify its authenticity.</p>
+            
+            <form id="news-form">
+                <div class="form-group">
+                    <label for="news-input">News Article / Statement:</label>
+                    <textarea 
+                        id="news-input" 
+                        name="news_text" 
+                        rows="7" 
+                        placeholder="Enter or paste news text here..." 
+                        required></textarea>
+                </div>
+
+                <div class="button-row">
+                    <button type="submit" id="analyze-btn" class="btn btn-primary">
+                        <span>🔍 Analyze News</span>
+                    </button>
+                    <button type="button" id="sample-btn" class="btn btn-secondary">
+                        <span>🎲 Load Sample</span>
+                    </button>
+                    <button type="button" id="clear-btn" class="btn btn-outline">
+                        <span>✖ Clear</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Prediction Result Section (Hidden until analyzed) -->
+        <section id="result-card" class="card result-card" style="display: none;">
+            <h2>Analysis Result</h2>
+            <div class="result-content">
+                <div class="verdict-box" id="verdict-box">
+                    <span class="verdict-label">Prediction</span>
+                    <h3 id="verdict-text" class="verdict-text">--</h3>
+                    <p id="confidence-text" class="confidence-text">Confidence: --%</p>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="prediction-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent History Section -->
+        <section class="card history-card">
+            <div class="history-header">
+                <h2>Recent Verifications</h2>
+                <button type="button" id="refresh-history-btn" class="btn btn-sm btn-outline">🔄 Refresh</button>
+            </div>
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>News Snippet</th>
+                            <th>Result</th>
+                            <th>Confidence</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr>
+                            <td colspan="5" class="empty-state">No predictions yet. Run an analysis above.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Fake News Detection Using Machine Learning and Natural Language Processing &bull; Flask &bull; Scikit-learn &bull; NLTK</p>
+    </footer>
+
+    <!-- App Script -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

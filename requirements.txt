@@ -1,0 +1,14 @@
+# Python Dependencies for Fake News Detection College Project
+# Web Framework
+Flask>=3.0.0
+
+# Data Processing & Numerical Operations
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine Learning & NLP
+scikit-learn>=1.3.0
+nltk>=3.8.0
+joblib>=1.3.0
+
+# Note: SQLite (sqlite3) is included in the Python Standard Library.
