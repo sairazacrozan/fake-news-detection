@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction History - Fake News Detection</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <a href="/" class="nav-brand">
+                <span class="nav-icon">📰</span>
+                <span>Fake News Detector</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/history" class="nav-link active">History</a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header>
+            <div class="badge-header">
+                <span>🕒 Stored Records</span>
+            </div>
+            <h1>Prediction History</h1>
+            <p class="description">
+                View previous news verification queries and model classifications stored in the local SQLite database.
+            </p>
+        </header>
+
+        <!-- Summary Cards Grid -->
+        <section class="dashboard-grid">
+            <!-- Card 1: Total Predictions -->
+            <div class="summary-card card-total">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">Total Predictions</span>
+                    <span class="summary-card-icon">📑</span>
+                </div>
+                <div class="summary-card-value">{{ summary.total }}</div>
+                <span class="summary-card-desc">
+                    {% if current_filter == 'Random Forest' %}
+                    Random Forest predictions
+                    {% elif current_filter == 'All Models' %}
+                    Across all recorded models
+                    {% else %}
+                    {{ current_filter }} predictions
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- Card 2: FAKE Predictions -->
+            <div class="summary-card card-fake">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">FAKE Predictions</span>
+                    <span class="summary-card-icon">⚠️</span>
+                </div>
+                <div class="summary-card-value" style="color: var(--fake-red);">{{ summary.fake }}</div>
+                <span class="summary-card-desc">Classified as misinformation</span>
+            </div>
+
+            <!-- Card 3: REAL Predictions -->
+            <div class="summary-card card-real">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">REAL Predictions</span>
+                    <span class="summary-card-icon">✅</span>
+                </div>
+                <div class="summary-card-value" style="color: var(--real-green);">{{ summary.real }}</div>
+                <span class="summary-card-desc">Classified as authentic news</span>
+            </div>
+
+            <!-- Card 4: Active Model -->
+            <div class="summary-card card-models">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">Active Model</span>
+                    <span class="summary-card-icon">🌲</span>
+                </div>
+                <div class="summary-card-value" style="color: var(--real-green); font-size: 1.65rem; padding-top: 0.35rem;">
+                    {{ active_model if active_model else 'Random Forest' }}
+                </div>
+                <span class="summary-card-desc">Current production model</span>
+            </div>
+        </section>
+
+        <!-- History Content Card -->
+        <main class="card">
+            <div class="history-topbar">
+                <div>
+                    <h2>Saved Predictions</h2>
+                    <span class="history-subtitle">
+                        Showing {{ summary.total }} record{% if summary.total != 1 %}s{% endif %} &bull;
+                        {% if current_filter == 'Random Forest' %}
+                        Active Model (Random Forest)
+                        {% elif current_filter == 'All Models' %}
+                        All Historical Records
+                        {% else %}
+                        Filtered: {{ current_filter }}
+                        {% endif %}
+                    </span>
+                </div>
+                <a href="/" class="btn-link">← Analyze Another Article</a>
+            </div>
+
+            <!-- Model Filter Bar -->
+            <div class="history-filter-bar">
+                <span class="filter-label">Filter by Model:</span>
+                <div class="filter-pills">
+                    <a href="/history?model=Random+Forest" 
+                       class="filter-pill {% if current_filter == 'Random Forest' %}active{% endif %}">
+                        🌲 Random Forest (Active){% if model_counts and model_counts.get('Random Forest') is not none %} ({{ model_counts['Random Forest'] }}){% endif %}
+                    </a>
+                    <a href="/history?model=all" 
+                       class="filter-pill {% if current_filter == 'All Models' %}active{% endif %}">
+                        📂 All Models{% if model_counts and model_counts.get('All Models') is not none %} ({{ model_counts['All Models'] }}){% endif %}
+                    </a>
+                    {% if model_counts %}
+                        {% for m_name in ['Logistic Regression', 'Naive Bayes', 'SVM', 'Historical prediction'] %}
+                            {% if model_counts.get(m_name, 0) > 0 %}
+                            <a href="/history?model={{ m_name | urlencode }}" 
+                               class="filter-pill {% if current_filter == m_name %}active{% endif %}">
+                                {{ m_name }} ({{ model_counts[m_name] }})
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if not predictions %}
+            <!-- Empty State -->
+            <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <p class="empty-text">
+                    {% if current_filter == 'Random Forest' %}
+                    No predictions found for Random Forest yet. Analyze a news article on the Home page to start logging records.
+                    {% else %}
+                    No predictions recorded for {{ current_filter }}.
+                    {% endif %}
+                </p>
+                <div style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; justify-content: center;">
+                    <a href="/" class="btn-submit">Analyze News</a>
+                    {% if current_filter != 'All Models' %}
+                    <a href="/history?model=all" class="btn-secondary">View All Records</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Prediction History Table -->
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Date & Time</th>
+                            <th>News Article Preview</th>
+                            <th>Model</th>
+                            <th>Prediction</th>
+                            <th>Confidence Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in predictions %}
+                        <tr>
+                            <td class="id-col">{{ row.id }}</td>
+                            <td class="time-col">{{ row.timestamp if row.timestamp else 'N/A' }}</td>
+                            <td>
+                                <!-- Article text rendered safely with truncation and full hover tooltip -->
+                                <div class="article-text-cell" title="{{ row.article_text }}">
+                                    {{ row.article_text | truncate(110, True, '...') }}
+                                </div>
+                            </td>
+                            <td class="model-col">
+                                {% if row.model_display == 'Random Forest' %}
+                                <span class="badge-model active">🌲 Random Forest</span>
+                                {% elif row.model_display == 'Historical prediction' %}
+                                <span class="badge-model historical">Historical prediction</span>
+                                {% else %}
+                                <span class="badge-model">{{ row.model_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.prediction and row.prediction.upper() == 'REAL' %}
+                                <span class="badge-verdict real">REAL</span>
+                                {% elif row.prediction and row.prediction.upper() == 'FAKE' %}
+                                <span class="badge-verdict fake">FAKE</span>
+                                {% else %}
+                                <span class="badge-verdict">{{ row.prediction }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="confidence-col">
+                                {% if row.confidence is not none %}
+                                <span class="confidence-badge">{{ "%.2f"|format(row.confidence) }}%</span>
+                                {% else %}
+                                <span style="color: var(--text-muted);">N/A</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </main>
+
+        <footer>
+            <p>Fake News Detection Flask Application &bull; NLP & Machine Learning</p>
+        </footer>
+    </div>
+</body>
+</html>

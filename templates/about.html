@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Fake News Detection System</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <a href="/" class="nav-brand">
+                <span class="nav-icon">📰</span>
+                <span>Fake News Detector</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/history" class="nav-link">History</a>
+                <a href="/about" class="nav-link active">About</a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header class="hero">
+            <div class="badge-header">
+                <span>📚 Project Overview</span>
+            </div>
+            <h1>About This Project</h1>
+            <p class="subtitle">Fake News Detection Using Machine Learning & Natural Language Processing</p>
+            <p class="explanation">
+                A college-level machine learning and NLP application engineered to analyze textual patterns in news articles and classify them as authentic or misinformation.
+            </p>
+        </header>
+
+        <!-- Content Card -->
+        <main class="card">
+            <div class="about-grid">
+                <!-- Section 1 -->
+                <div class="about-card">
+                    <h3><span>🔍</span> NLP Preprocessing Pipeline</h3>
+                    <p>
+                        Input articles undergo thorough text normalization using NLTK and Python regular expressions:
+                    </p>
+                    <ul>
+                        <li>Lowercasing and punctuation removal</li>
+                        <li>Number and symbol filtering</li>
+                        <li>Stopword removal using NLTK English corpus</li>
+                        <li>Tokenization and whitespace normalization</li>
+                    </ul>
+                </div>
+
+                <!-- Section 2 -->
+                <div class="about-card">
+                    <h3><span>⚙️</span> Feature Extraction</h3>
+                    <p>
+                        Normalized text is converted into high-dimensional numerical vectors using TF-IDF (Term Frequency-Inverse Document Frequency):
+                    </p>
+                    <ul>
+                        <li>Vocabulary size: Top 5,000 informative features</li>
+                        <li>N-gram range: Unigrams and bigrams (1, 2)</li>
+                        <li>Sublinear term-frequency scaling</li>
+                    </ul>
+                </div>
+
+                <!-- Section 3 -->
+                <div class="about-card">
+                    <h3><span>🤖</span> Trained Machine Learning Models</h3>
+                    <p>
+                        Four complementary classification algorithms were trained and evaluated on labelled benchmarks:
+                    </p>
+                    <ul>
+                        <li><strong>Logistic Regression:</strong> Probabilistic linear classification baseline</li>
+                        <li><strong>Multinomial Naive Bayes:</strong> Frequency-based probabilistic model</li>
+                        <li><strong>Random Forest:</strong> Ensemble decision tree architecture</li>
+                        <li><strong>Linear SVM:</strong> Maximum-margin hyperplane classifier</li>
+                    </ul>
+                </div>
+
+                <!-- Section 4 -->
+                <div class="about-card">
+                    <h3><span>💾</span> Web & Database Architecture</h3>
+                    <p>
+                        Built using a modular software stack designed for demonstration and evaluation:
+                    </p>
+                    <ul>
+                        <li><strong>Backend:</strong> Flask microframework (Python 3)</li>
+                        <li><strong>Storage:</strong> Local SQLite database (<code>database/history.db</code>)</li>
+                        <li><strong>Analytics:</strong> Responsive Chart.js client-side visualizers</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Mandatory Scientific Notice -->
+            <div class="notice-box" style="margin-top: 1.75rem;">
+                <span class="notice-icon">ℹ️</span>
+                <div>
+                    <strong>Scientific Notice:</strong> The system classifies news articles as FAKE or REAL based on patterns learned from labelled training data. The confidence score represents model statistical certainty relative to the dataset, not a factual guarantee of real-world truth.
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Fake News Detection Flask Application &bull; Academic Presentation & Demonstration</p>
+        </footer>
+    </div>
+</body>
+</html>

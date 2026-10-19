@@ -1,106 +1,358 @@
 """
-Fake News Detection Web Application
-Flask Application Entry Point
+Phase 11: Flask Backend Application with Dashboard & Analytics
+Project: Fake News Detection Using Machine Learning and NLP
+
+This Flask application serves the web interface and handles prediction requests.
+It delegates all machine learning inference and artifact loading to prediction.py.
+Supports manual text input, .txt file uploads, SQLite history persistence, and analytics dashboard.
+Routes:
+  - GET  /          : Home page for news text analysis and file upload
+  - POST /predict   : Predict authenticity and persist result to database
+  - GET  /dashboard : Analytics dashboard visualizing system metrics and model breakdown
+  - GET  /history   : View history of previous predictions
 """
 
-from flask import Flask, render_template, request, jsonify
 import os
-import joblib
-from database.db import init_db, save_prediction, get_recent_predictions
+from flask import Flask, render_template, request, jsonify
+from werkzeug.utils import secure_filename
+from prediction import predict_news, get_available_models
+from database.db import (
+    init_db,
+    save_prediction,
+    get_predictions,
+    get_dashboard_statistics
+)
 
+# Initialize Flask application
 app = Flask(__name__)
 
-# Paths for ML artifacts
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "model")
-MODEL_PATH = os.path.join(MODEL_DIR, "model.joblib")
-VECTORIZER_PATH = os.path.join(MODEL_DIR, "vectorizer.joblib")
+# Ensure templates directory exists
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
-# Global variables for model and vectorizer
-model = None
-vectorizer = None
+# Initialize SQLite database and predictions table on startup
+init_db()
 
-
-def load_model_artifacts():
-    """Load model and vectorizer if artifacts exist."""
-    global model, vectorizer
-    if os.path.exists(MODEL_PATH) and os.path.exists(VECTORIZER_PATH):
-        try:
-            model = joblib.load(MODEL_PATH)
-            vectorizer = joblib.load(VECTORIZER_PATH)
-            print("Model and vectorizer loaded successfully.")
-        except Exception as e:
-            print(f"Error loading model artifacts: {e}")
-    else:
-        print("Model artifacts not found. Predictions will run in placeholder mode.")
+# Allowed file extensions for file upload support
+ALLOWED_EXTENSIONS = {".txt"}
 
 
-@app.route("/")
+def is_allowed_file(filename: str) -> bool:
+    """Validate whether the uploaded file has an allowed extension (.txt)."""
+    if not filename:
+        return False
+    _, ext = os.path.splitext(filename)
+    return ext.lower() in ALLOWED_EXTENSIONS
+
+
+# Name of the dedicated, highest-performing production model
+SELECTED_MODEL = "Random Forest"
+
+
+@app.route("/", methods=["GET"])
 def index():
-    """Render main web application interface."""
-    return render_template("index.html")
+    """
+    GET /
+    Display the main web page with news input form and file upload.
+    Uses Random Forest as the dedicated model.
+    """
+    return render_template(
+        "index.html",
+        selected_model=SELECTED_MODEL,
+        news_text="",
+        prediction=None,
+        confidence=None,
+        error_message=None
+    )
 
 
 @app.route("/predict", methods=["POST"])
 def predict():
     """
-    API endpoint to predict if news is Real or Fake.
-    Note: ML model implementation will be integrated once trained.
-    Currently provides placeholder response if model files are not yet created.
+    POST /predict
+    Receive news text from either manual input or an uploaded .txt file.
+    Always uses Random Forest as the classification model.
+
+    Input priority:
+    1. If the user enters text manually, use that text.
+    2. If no manual text is entered but a .txt file is uploaded, use the uploaded file.
+    3. If both are provided, use the manually entered text and ignore the file.
+    4. If neither is provided, show a clear error message.
+
+    Upon successful prediction:
+    Persist prediction record into database/history.db via save_prediction().
     """
-    data = request.get_json(silent=True) or {}
-    news_text = data.get("news_text", "").strip()
+    # Always use the dedicated production model: Random Forest
+    model_name = SELECTED_MODEL
 
+    # Determine request format (JSON or standard multipart Form submission)
+    is_json_request = request.is_json or request.headers.get("Accept") == "application/json"
+
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        news_text = data.get("news_text", "")
+        uploaded_file = None
+    else:
+        news_text = request.form.get("news_text", "")
+        uploaded_file = request.files.get("news_file")
+
+    # Sanitize inputs
+    news_text = news_text.strip() if isinstance(news_text, str) else ""
+
+    # Input priority handling:
+    # If no manual text is provided, attempt to extract text from the uploaded .txt file
+    if not news_text and uploaded_file and uploaded_file.filename:
+        # Validate file extension (.txt only)
+        if not is_allowed_file(uploaded_file.filename):
+            error_msg = "Invalid file type. Only plain text (.txt) files are allowed."
+            if is_json_request:
+                return jsonify({"status": "error", "error": error_msg}), 400
+            return render_template(
+                "index.html",
+                selected_model=SELECTED_MODEL,
+                news_text="",
+                prediction=None,
+                confidence=None,
+                error_message=error_msg
+            ), 400
+
+        # Read uploaded file safely in-memory
+        try:
+            file_bytes = uploaded_file.read()
+            try:
+                extracted_text = file_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                extracted_text = file_bytes.decode("latin-1", errors="replace")
+
+            news_text = extracted_text.strip()
+
+            # Check for empty file content
+            if not news_text:
+                error_msg = "The uploaded file is empty. Please provide a file with news text."
+                if is_json_request:
+                    return jsonify({"status": "error", "error": error_msg}), 400
+                return render_template(
+                    "index.html",
+                    selected_model=SELECTED_MODEL,
+                    news_text="",
+                    prediction=None,
+                    confidence=None,
+                    error_message=error_msg
+                ), 400
+
+        except Exception as read_err:
+            error_msg = f"Failed to read uploaded file: {str(read_err)}"
+            if is_json_request:
+                return jsonify({"status": "error", "error": error_msg}), 400
+            return render_template(
+                "index.html",
+                selected_model=SELECTED_MODEL,
+                news_text="",
+                prediction=None,
+                confidence=None,
+                error_message=error_msg
+            ), 400
+
+    # Validate: If neither manual text nor uploaded file content was provided
     if not news_text:
-        return jsonify({"error": "Please provide news content to analyze."}), 400
+        error_msg = "Please enter news text or upload a .txt file to analyze."
+        if is_json_request:
+            return jsonify({"status": "error", "error": error_msg}), 400
+        return render_template(
+            "index.html",
+            selected_model=SELECTED_MODEL,
+            news_text="",
+            prediction=None,
+            confidence=None,
+            error_message=error_msg
+        ), 400
 
-    # If ML model is trained and loaded:
-    if model is not None and vectorizer is not None:
-        # Preprocessing & actual model prediction logic will go here
-        # transformed = vectorizer.transform([news_text])
-        # pred = model.predict(transformed)[0]
-        pass
+    # Execute prediction via prediction.py using Random Forest
+    try:
+        result = predict_news(news_text=news_text, model_name=SELECTED_MODEL)
+        formatted_confidence = f"{result['confidence']:.2f}%"
 
-    # Placeholder / Starter response (before ML model is trained)
-    # Allows frontend testing and SQLite history logging verification
-    sample_prediction = "REAL" if len(news_text) % 2 == 0 else "FAKE"
-    sample_confidence = 0.88
+        # Save successful prediction to SQLite database with model "Random Forest"
+        try:
+            save_prediction(
+                article_text=news_text,
+                model=result["model_name"],
+                prediction=result["prediction"],
+                confidence=result["confidence"]
+            )
+        except Exception as db_err:
+            # Gracefully handle database error without failing the prediction response
+            print(f"[WARNING] Failed to save prediction to database: {db_err}")
 
-    # Save prediction to SQLite database
-    save_prediction(news_text, sample_prediction, sample_confidence)
+        if is_json_request:
+            return jsonify({
+                "status": "success",
+                "prediction": result["prediction"],
+                "model": result["model_name"],
+                "confidence": formatted_confidence,
+                "notice": (
+                    "This classification is based on patterns learned from the labelled "
+                    "training dataset. The confidence score is not a factual guarantee."
+                )
+            })
 
-    return jsonify({
-        "status": "success",
-        "prediction": sample_prediction,
-        "confidence": sample_confidence,
-        "probabilities": {
-            "Real": 0.88 if sample_prediction == "REAL" else 0.12,
-            "Fake": 0.12 if sample_prediction == "REAL" else 0.88
-        },
-        "is_model_trained": model is not None
-    })
+        return render_template(
+            "index.html",
+            selected_model=result["model_name"],
+            news_text=news_text,
+            prediction=result["prediction"],
+            confidence=formatted_confidence,
+            error_message=None
+        )
+
+    except Exception as exc:
+        error_msg = f"Prediction failed: {str(exc)}"
+        if is_json_request:
+            return jsonify({"status": "error", "error": error_msg}), 500
+        return render_template(
+            "index.html",
+            selected_model=SELECTED_MODEL,
+            news_text=news_text,
+            prediction=None,
+            confidence=None,
+            error_message=error_msg
+        ), 500
+
+
+@app.route("/dashboard", methods=["GET"])
+def dashboard():
+    """
+    GET /dashboard
+    Retrieve analytics statistics from SQLite database and render the dashboard page.
+    Displays FAKE vs REAL distribution and Random Forest performance evaluation metrics.
+    Handles empty database gracefully without crashing.
+    """
+    try:
+        stats = get_dashboard_statistics()
+    except Exception as exc:
+        print(f"[ERROR] Failed to fetch dashboard statistics: {exc}")
+        stats = {
+            "total": 0,
+            "fake": 0,
+            "real": 0,
+            "models_used": 0,
+            "model_counts": {
+                "Logistic Regression": 0,
+                "Naive Bayes": 0,
+                "Random Forest": 0,
+                "SVM": 0
+            },
+            "daily_counts": []
+        }
+
+    # Recorded test-set evaluation results for Random Forest
+    rf_metrics = {
+        "Accuracy": 99.75,
+        "Precision": 99.69,
+        "Recall": 99.79,
+        "F1-score": 99.74
+    }
+
+    return render_template(
+        "dashboard.html",
+        stats=stats,
+        active_model=SELECTED_MODEL,
+        rf_metrics=rf_metrics
+    )
 
 
 @app.route("/history", methods=["GET"])
 def history():
-    """Fetch recent prediction history from SQLite database."""
-    records = get_recent_predictions(limit=10)
-    history_list = [
-        {
-            "id": row["id"],
-            "news_text": row["news_text"],
-            "prediction": row["prediction"],
-            "confidence": row["confidence"],
-            "created_at": row["created_at"]
-        }
-        for row in records
-    ]
-    return jsonify(history_list)
+    """
+    GET /history
+    Retrieve saved predictions from SQLite database and render the history page.
+    Defaults to showing predictions from the active Random Forest model.
+    Supports filtering by model (e.g. ?model=all or ?model=Logistic+Regression).
+    """
+    model_filter = request.args.get("model", SELECTED_MODEL).strip()
+
+    try:
+        all_predictions = get_predictions()
+    except Exception as exc:
+        print(f"[ERROR] Failed to fetch prediction history: {exc}")
+        all_predictions = []
+
+    # Clean and safely identify model names without incorrectly relabelling
+    cleaned_records = []
+    for row in all_predictions:
+        rec = dict(row)
+        m = rec.get("model")
+        if not m or not str(m).strip():
+            # Neutral label for older records where model cannot be identified
+            rec["model_display"] = "Historical prediction"
+            rec["is_unknown"] = True
+        else:
+            m_str = str(m).strip()
+            if m_str.lower() in ("linear svm", "linearsvc"):
+                rec["model_display"] = "SVM"
+            else:
+                rec["model_display"] = m_str
+            rec["is_unknown"] = False
+        cleaned_records.append(rec)
+
+    # Filter records according to requested model
+    if model_filter.lower() in ("all", "all models", "all records"):
+        filtered_records = cleaned_records
+        current_filter = "All Models"
+    else:
+        filtered_records = [
+            r for r in cleaned_records
+            if r["model_display"].lower() == model_filter.lower()
+        ]
+        if model_filter.lower() == SELECTED_MODEL.lower():
+            current_filter = SELECTED_MODEL
+        else:
+            matching_models = [r["model_display"] for r in cleaned_records if r["model_display"].lower() == model_filter.lower()]
+            if matching_models:
+                current_filter = matching_models[0]
+            else:
+                current_filter = model_filter
+
+    # Calculate summary metrics strictly representing the records displayed
+    summary = {
+        "total": len(filtered_records),
+        "fake": sum(1 for r in filtered_records if str(r.get("prediction", "")).upper() == "FAKE"),
+        "real": sum(1 for r in filtered_records if str(r.get("prediction", "")).upper() == "REAL")
+    }
+
+    # Available filter counts for the UI filter pills
+    model_counts = {
+        "Random Forest": sum(1 for r in cleaned_records if r["model_display"] == "Random Forest"),
+        "All Models": len(cleaned_records),
+        "Logistic Regression": sum(1 for r in cleaned_records if r["model_display"] == "Logistic Regression"),
+        "Naive Bayes": sum(1 for r in cleaned_records if r["model_display"] == "Naive Bayes"),
+        "SVM": sum(1 for r in cleaned_records if r["model_display"] == "SVM")
+    }
+    historical_count = sum(1 for r in cleaned_records if r["model_display"] == "Historical prediction")
+    if historical_count > 0:
+        model_counts["Historical prediction"] = historical_count
+
+    return render_template(
+        "history.html",
+        predictions=filtered_records,
+        summary=summary,
+        current_filter=current_filter,
+        model_counts=model_counts,
+        active_model=SELECTED_MODEL
+    )
+
+
+@app.route("/about", methods=["GET"])
+def about():
+    """
+    GET /about
+    Render the project information page explaining ML models, NLP workflow, and limitations.
+    """
+    return render_template("about.html")
 
 
 if __name__ == "__main__":
-    # Ensure database is initialized
     init_db()
-    # Attempt to load model artifacts if available
-    load_model_artifacts()
-    # Run development server
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    print("Fake News Detection Flask Application")
+    print("Running at http://127.0.0.1:5000")
+    app.run(debug=True)

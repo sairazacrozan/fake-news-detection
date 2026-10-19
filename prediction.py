@@ -240,7 +240,7 @@ def calculate_confidence(model, features, predicted_class: int) -> float:
     return round(float(confidence_val), 2)
 
 
-def predict_news(news_text: str, model_name: str = "SVM"):
+def predict_news(news_text: str, model_name: str = "Random Forest"):
     """
     Main reusable inference function to classify news text.
 
@@ -256,7 +256,7 @@ def predict_news(news_text: str, model_name: str = "SVM"):
     Parameters:
         news_text (str): News article headline, text, or user input.
         model_name (str): Chosen model name ("Logistic Regression", "Naive Bayes",
-                          "Random Forest", "SVM"). Default is "SVM".
+                          "Random Forest", "SVM"). Default is "Random Forest".
 
     Returns:
         PredictionResult: Object supporting tuple unpacking, dict keys, and attributes:

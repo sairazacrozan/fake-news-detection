@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Fake News Detection</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <a href="/" class="nav-brand">
+                <span class="nav-icon">📰</span>
+                <span>Fake News Detector</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/dashboard" class="nav-link active">Dashboard</a>
+                <a href="/history" class="nav-link">History</a>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <header>
+            <div class="badge-header">
+                <span>📊 System Metrics</span>
+            </div>
+            <h1>Analytics Dashboard</h1>
+            <p class="description">
+                Overview of news articles analyzed by the Fake News Detection system.
+            </p>
+        </header>
+
+        <!-- Summary Cards Grid -->
+        <section class="dashboard-grid">
+            <!-- Card 1: Total Articles Analyzed -->
+            <div class="summary-card card-total">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">Total Articles Analyzed</span>
+                    <span class="summary-card-icon">📑</span>
+                </div>
+                <div class="summary-card-value">{{ stats.total }}</div>
+                <span class="summary-card-desc">Total saved prediction records</span>
+            </div>
+
+            <!-- Card 2: Fake Predictions -->
+            <div class="summary-card card-fake">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">FAKE Predictions</span>
+                    <span class="summary-card-icon">⚠️</span>
+                </div>
+                <div class="summary-card-value" style="color: var(--fake-red);">{{ stats.fake }}</div>
+                <span class="summary-card-desc">Classified as misinformation</span>
+            </div>
+
+            <!-- Card 3: Real Predictions -->
+            <div class="summary-card card-real">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">REAL Predictions</span>
+                    <span class="summary-card-icon">✅</span>
+                </div>
+                <div class="summary-card-value" style="color: var(--real-green);">{{ stats.real }}</div>
+                <span class="summary-card-desc">Classified as authentic news</span>
+            </div>
+
+            <!-- Card 4: Active Model -->
+            <div class="summary-card card-models">
+                <div class="summary-card-header">
+                    <span class="summary-card-label">Active Model</span>
+                    <span class="summary-card-icon">🌲</span>
+                </div>
+                <div class="summary-card-value" style="color: var(--real-green); font-size: 1.65rem; padding-top: 0.35rem;">{{ active_model if active_model else 'Random Forest' }}</div>
+                <span class="summary-card-desc">Current production model</span>
+            </div>
+        </section>
+
+        <!-- Charts Grid -->
+        <section class="charts-grid">
+            <!-- Chart 1: FAKE vs REAL -->
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h2 class="chart-card-title">FAKE vs REAL Distribution</h2>
+                </div>
+                <div class="chart-container-box">
+                    {% if stats.total == 0 %}
+                    <div class="chart-empty">
+                        <span class="chart-empty-icon">📊</span>
+                        <p class="chart-empty-text">No prediction records available to visualize.</p>
+                    </div>
+                    {% else %}
+                    <canvas id="fakeRealChart"></canvas>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Chart 2: Random Forest Evaluation Metrics -->
+            <div class="chart-card">
+                <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <h2 class="chart-card-title">Random Forest Evaluation Metrics</h2>
+                    <span class="model-badge" style="font-size: 0.78rem; padding: 0.2rem 0.55rem;">Test Set Evaluation</span>
+                </div>
+                <div class="chart-container-box">
+                    <canvas id="rfMetricsChart"></canvas>
+                </div>
+                <p class="chart-caption">
+                    Performance measured on the project's held-out test dataset. These metrics do not guarantee the same performance on unseen real-world news.
+                </p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>Fake News Detection Flask Application &bull; NLP & Machine Learning Analytics</p>
+        </footer>
+    </div>
+
+    <!-- Chart.js Visualization Logic -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Chart defaults for clean, readable grey theme
+            Chart.defaults.color = '#4B5563';
+            Chart.defaults.font.family = "'Inter', -apple-system, sans-serif";
+
+            // Data passed safely via Jinja
+            const totalCount = {{ stats.total }};
+            const fakeCount = {{ stats.fake }};
+            const realCount = {{ stats.real }};
+
+            // Chart 1: FAKE vs REAL Doughnut Chart (Only rendered if total > 0)
+            if (totalCount > 0) {
+                const ctxDoughnut = document.getElementById('fakeRealChart');
+                if (ctxDoughnut) {
+                    new Chart(ctxDoughnut, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['FAKE', 'REAL'],
+                            datasets: [{
+                                data: [fakeCount, realCount],
+                                backgroundColor: ['#EF4444', '#10B981'],
+                                borderColor: '#F8F9FA',
+                                borderWidth: 3,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        padding: 20,
+                                        color: '#111827',
+                                        font: { size: 13, weight: '600' }
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: '#1F2937',
+                                    titleColor: '#FFFFFF',
+                                    bodyColor: '#FFFFFF',
+                                    borderColor: '#374151',
+                                    borderWidth: 1,
+                                    callbacks: {
+                                        label: function(context) {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = fakeCount + realCount;
+                                            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            return ` ${label}: ${value} (${pct}%)`;
+                                        }
+                                    }
+                                }
+                            },
+                            cutout: '65%'
+                        }
+                    });
+                }
+            }
+
+            // Chart 2: Random Forest Evaluation Metrics Bar Chart
+            const ctxRfBar = document.getElementById('rfMetricsChart');
+            if (ctxRfBar) {
+                const metricLabels = ['Accuracy', 'Precision', 'Recall', 'F1-score'];
+                const metricValues = [99.75, 99.69, 99.79, 99.74];
+
+                new Chart(ctxRfBar, {
+                    type: 'bar',
+                    data: {
+                        labels: metricLabels,
+                        datasets: [{
+                            label: 'Score (%)',
+                            data: metricValues,
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.9)',
+                                'rgba(37, 99, 235, 0.9)',
+                                'rgba(79, 70, 229, 0.9)',
+                                'rgba(236, 72, 153, 0.9)'
+                            ],
+                            borderColor: [
+                                '#10B981',
+                                '#2563EB',
+                                '#4F46E5',
+                                '#EC4899'
+                            ],
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#1F2937',
+                                titleColor: '#FFFFFF',
+                                bodyColor: '#FFFFFF',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: ${context.parsed.y.toFixed(2)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#111827',
+                                    font: { size: 12, weight: '600' }
+                                }
+                            },
+                            y: {
+                                min: 90,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 2,
+                                    color: '#4B5563',
+                                    callback: function(val) {
+                                        return val + '%';
+                                    }
+                                },
+                                grid: {
+                                    color: '#DEE2E6'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
