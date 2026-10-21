@@ -45,8 +45,11 @@ def is_allowed_file(filename: str) -> bool:
     return ext.lower() in ALLOWED_EXTENSIONS
 
 
-# Name of the dedicated, highest-performing production model
-SELECTED_MODEL = "Random Forest"
+# Name of the dedicated production model
+# Naive Bayes generalises best on real-world news inputs for this TF-IDF dataset:
+# it handles sparse vectors and unseen distributions more gracefully than Random Forest
+# (which over-fits to Reuters dateline patterns) or Logistic Regression.
+SELECTED_MODEL = "Naive Bayes"
 
 
 @app.route("/", methods=["GET"])
@@ -54,7 +57,7 @@ def index():
     """
     GET /
     Display the main web page with news input form and file upload.
-    Uses Random Forest as the dedicated model.
+    Uses Naive Bayes as the dedicated model.
     """
     return render_template(
         "index.html",
@@ -71,7 +74,7 @@ def predict():
     """
     POST /predict
     Receive news text from either manual input or an uploaded .txt file.
-    Always uses Random Forest as the classification model.
+    Always uses Naive Bayes as the classification model.
 
     Input priority:
     1. If the user enters text manually, use that text.
@@ -82,7 +85,7 @@ def predict():
     Upon successful prediction:
     Persist prediction record into database/history.db via save_prediction().
     """
-    # Always use the dedicated production model: Random Forest
+    # Always use the dedicated production model: Naive Bayes
     model_name = SELECTED_MODEL
 
     # Determine request format (JSON or standard multipart Form submission)
@@ -224,7 +227,7 @@ def dashboard():
     """
     GET /dashboard
     Retrieve analytics statistics from SQLite database and render the dashboard page.
-    Displays FAKE vs REAL distribution and Random Forest performance evaluation metrics.
+    Displays FAKE vs REAL distribution and Naive Bayes performance evaluation metrics.
     Handles empty database gracefully without crashing.
     """
     try:
@@ -245,12 +248,12 @@ def dashboard():
             "daily_counts": []
         }
 
-    # Recorded test-set evaluation results for Random Forest
+    # Recorded test-set evaluation results for Naive Bayes
     rf_metrics = {
-        "Accuracy": 99.75,
-        "Precision": 99.69,
-        "Recall": 99.79,
-        "F1-score": 99.74
+        "Accuracy": 93.32,
+        "Precision": 93.28,
+        "Recall": 92.60,
+        "F1-score": 92.94
     }
 
     return render_template(
@@ -266,7 +269,7 @@ def history():
     """
     GET /history
     Retrieve saved predictions from SQLite database and render the history page.
-    Defaults to showing predictions from the active Random Forest model.
+    Defaults to showing predictions from the active Naive Bayes model.
     Supports filtering by model (e.g. ?model=all or ?model=Logistic+Regression).
     """
     model_filter = request.args.get("model", SELECTED_MODEL).strip()
