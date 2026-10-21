@@ -52,6 +52,37 @@ def is_allowed_file(filename: str) -> bool:
 SELECTED_MODEL = "Naive Bayes"
 
 
+def get_model_evaluation_metrics(model_name: str = SELECTED_MODEL) -> dict:
+    """
+    Retrieve actual saved evaluation metrics from training/model_results.csv.
+    Falls back to verified benchmark metrics if CSV cannot be accessed.
+    """
+    results_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "training", "model_results.csv")
+    metrics = {
+        "Accuracy": 93.32,
+        "Precision": 93.28,
+        "Recall": 92.60,
+        "F1-score": 92.94
+    }
+    if os.path.exists(results_csv):
+        try:
+            import pandas as pd
+            df = pd.read_csv(results_csv)
+            for _, row in df.iterrows():
+                row_model = str(row["Model"]).strip()
+                if model_name.lower() in row_model.lower() or row_model.lower() in model_name.lower():
+                    metrics = {
+                        "Accuracy": round(float(row["Accuracy"]) * 100, 2),
+                        "Precision": round(float(row["Precision"]) * 100, 2),
+                        "Recall": round(float(row["Recall"]) * 100, 2),
+                        "F1-score": round(float(row["F1_Score"]) * 100, 2),
+                    }
+                    break
+        except Exception:
+            pass
+    return metrics
+
+
 @app.route("/", methods=["GET"])
 def index():
     """
@@ -59,9 +90,11 @@ def index():
     Display the main web page with news input form and file upload.
     Uses Naive Bayes as the dedicated model.
     """
+    metrics = get_model_evaluation_metrics(SELECTED_MODEL)
     return render_template(
         "index.html",
         selected_model=SELECTED_MODEL,
+        model_accuracy=f"{metrics['Accuracy']:.2f}%",
         news_text="",
         prediction=None,
         confidence=None,
@@ -87,6 +120,8 @@ def predict():
     """
     # Always use the dedicated production model: Naive Bayes
     model_name = SELECTED_MODEL
+    metrics = get_model_evaluation_metrics(SELECTED_MODEL)
+    model_acc_str = f"{metrics['Accuracy']:.2f}%"
 
     # Determine request format (JSON or standard multipart Form submission)
     is_json_request = request.is_json or request.headers.get("Accept") == "application/json"
@@ -113,6 +148,7 @@ def predict():
             return render_template(
                 "index.html",
                 selected_model=SELECTED_MODEL,
+                model_accuracy=model_acc_str,
                 news_text="",
                 prediction=None,
                 confidence=None,
@@ -137,6 +173,7 @@ def predict():
                 return render_template(
                     "index.html",
                     selected_model=SELECTED_MODEL,
+                    model_accuracy=model_acc_str,
                     news_text="",
                     prediction=None,
                     confidence=None,
@@ -150,6 +187,7 @@ def predict():
             return render_template(
                 "index.html",
                 selected_model=SELECTED_MODEL,
+                model_accuracy=model_acc_str,
                 news_text="",
                 prediction=None,
                 confidence=None,
@@ -164,18 +202,19 @@ def predict():
         return render_template(
             "index.html",
             selected_model=SELECTED_MODEL,
+            model_accuracy=model_acc_str,
             news_text="",
             prediction=None,
             confidence=None,
             error_message=error_msg
         ), 400
 
-    # Execute prediction via prediction.py using Random Forest
+    # Execute prediction via prediction.py using Naive Bayes
     try:
         result = predict_news(news_text=news_text, model_name=SELECTED_MODEL)
         formatted_confidence = f"{result['confidence']:.2f}%"
 
-        # Save successful prediction to SQLite database with model "Random Forest"
+        # Save successful prediction to SQLite database with model "Naive Bayes"
         try:
             save_prediction(
                 article_text=news_text,
@@ -194,14 +233,15 @@ def predict():
                 "model": result["model_name"],
                 "confidence": formatted_confidence,
                 "notice": (
-                    "This classification is based on patterns learned from the labelled "
-                    "training dataset. The confidence score is not a factual guarantee."
+                    f"This classification is based on patterns learned by {result['model_name']} "
+                    "from the labelled training dataset. The confidence score is not a factual guarantee."
                 )
             })
 
         return render_template(
             "index.html",
             selected_model=result["model_name"],
+            model_accuracy=model_acc_str,
             news_text=news_text,
             prediction=result["prediction"],
             confidence=formatted_confidence,
@@ -215,6 +255,7 @@ def predict():
         return render_template(
             "index.html",
             selected_model=SELECTED_MODEL,
+            model_accuracy=model_acc_str,
             news_text=news_text,
             prediction=None,
             confidence=None,
@@ -249,18 +290,14 @@ def dashboard():
         }
 
     # Recorded test-set evaluation results for Naive Bayes
-    rf_metrics = {
-        "Accuracy": 93.32,
-        "Precision": 93.28,
-        "Recall": 92.60,
-        "F1-score": 92.94
-    }
+    metrics = get_model_evaluation_metrics(SELECTED_MODEL)
 
     return render_template(
         "dashboard.html",
         stats=stats,
         active_model=SELECTED_MODEL,
-        rf_metrics=rf_metrics
+        model_metrics=metrics,
+        rf_metrics=metrics
     )
 
 

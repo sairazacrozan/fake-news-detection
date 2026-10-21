@@ -89,10 +89,10 @@
                 <!-- Fixed Model Indicator & Submit -->
                 <div class="select-row">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>Selected Model: Random Forest</label>
+                        <label>Selected Model: {{ selected_model }}</label>
                         <div class="fixed-model-indicator">
-                            <span class="model-badge">🌲 Random Forest</span>
-                            <span class="model-status-tag">Primary Production Model (99.75% Accuracy)</span>
+                            <span class="model-badge">⚖️ {{ selected_model }}</span>
+                            <span class="model-status-tag">Primary Production Model ({{ model_accuracy if model_accuracy else '93.32%' }} Accuracy)</span>
                         </div>
                     </div>
 
@@ -138,7 +138,7 @@
             <div class="notice-box">
                 <span class="notice-icon">ℹ️</span>
                 <div>
-                    <strong>Limitation Notice:</strong> The prediction reflects patterns learned by Random Forest from the labelled training dataset. The confidence score indicates the statistical confidence of the model and is not a guarantee of real-world factual certainty.
+                    <strong>Limitation Notice:</strong> The prediction reflects patterns learned by {{ selected_model if selected_model else 'Naive Bayes' }} from the labelled training dataset. The confidence score indicates the statistical confidence of the model and is not a guarantee of real-world factual certainty.
                 </div>
             </div>
         </section>
@@ -149,7 +149,7 @@
         <div class="notice-box">
             <span class="notice-icon">ℹ️</span>
             <div>
-                <strong>Notice:</strong> The prediction reflects patterns learned by the model from the labelled training dataset. The confidence score represents statistical model confidence, not real-world factual certainty.
+                <strong>Notice:</strong> The prediction reflects patterns learned by {{ selected_model if selected_model else 'Naive Bayes' }} from the labelled training dataset. The confidence score represents statistical model confidence, not real-world factual certainty.
             </div>
         </div>
         {% endif %}

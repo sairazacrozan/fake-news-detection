@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detection - Machine Learning & NLP</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Global Navigation Bar -->
+        <nav class="navbar" aria-label="Main Navigation">
+            <a href="/" class="nav-brand">
+                <span class="nav-icon">📰</span>
+                <span>Fake News Detector</span>
+            </a>
+            <div class="nav-links">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="/dashboard" class="nav-link">Dashboard</a>
+                <a href="/history" class="nav-link">History</a>
+            </div>
+        </nav>
+
+        <!-- Professional Hero Section -->
+        <header class="hero">
+            <div class="badge-header">
+                <span>⚡ Machine Learning & NLP</span>
+            </div>
+            <h1>Fake News Detection</h1>
+            <p class="subtitle">
+                Analyze news articles using Machine Learning and Natural Language Processing.
+            </p>
+            <p class="explanation">
+                The system classifies news articles as FAKE or REAL based on patterns learned from labelled training data.
+            </p>
+        </header>
+
+        <!-- Main Form Card -->
+        <main class="card">
+            <!-- Error message display -->
+            {% if error_message %}
+            <div class="alert-error" role="alert">
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <div>
+                    <strong>Validation Notice:</strong> {{ error_message }}
+                </div>
+            </div>
+            {% endif %}
+
+            <form action="/predict" method="POST" id="news-form" enctype="multipart/form-data">
+                <!-- Manual Text Input -->
+                <div class="form-group">
+                    <label for="news_text">Enter News Article Text:</label>
+                    <textarea 
+                        id="news_text" 
+                        name="news_text" 
+                        rows="6" 
+                        placeholder="Paste or type the news article headline and full content here to verify its authenticity...">{{ news_text if news_text else '' }}</textarea>
+                </div>
+
+                <!-- Divider: OR -->
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+
+                <!-- Attractive File Upload Section -->
+                <div class="form-group">
+                    <label for="news_file">Or upload a news article (.txt):</label>
+                    <div class="file-upload-box">
+                        <input 
+                            type="file" 
+                            id="news_file" 
+                            name="news_file" 
+                            accept=".txt" 
+                            class="file-input"
+                            aria-label="Upload news article text file">
+                        <span class="file-hint">
+                            <span>📄</span> Accepted format: Plain text (.txt) files only
+                        </span>
+                        <div id="file-selected-badge" class="file-selected-badge"></div>
+                    </div>
+                </div>
+
+                <!-- Fixed Model Indicator & Submit -->
+                <div class="select-row">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Selected Model: Random Forest</label>
+                        <div class="fixed-model-indicator">
+                            <span class="model-badge">🌲 Random Forest</span>
+                            <span class="model-status-tag">Primary Production Model (99.75% Accuracy)</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="analyze-btn" class="btn-submit">
+                        <span id="btn-text">Analyze News</span>
+                    </button>
+                </div>
+            </form>
+        </main>
+
+        <!-- Prediction Result Display -->
+        {% if prediction %}
+        <section class="card result-card {{ 'is-fake' if prediction == 'FAKE' else 'is-real' }}" aria-live="polite">
+            <div class="result-header">
+                <h2>Analysis Result</h2>
+            </div>
+
+            <div class="result-grid">
+                <!-- Prediction Verdict -->
+                <div class="stat-box">
+                    <span class="stat-label">Prediction</span>
+                    <div>
+                        <span class="badge-verdict large {{ 'fake' if prediction == 'FAKE' else 'real' }}">
+                            {{ prediction }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Selected Model -->
+                <div class="stat-box">
+                    <span class="stat-label">Model</span>
+                    <span class="stat-value" style="font-size: 1.15rem; line-height: 1.35;">{{ selected_model }}</span>
+                </div>
+
+                <!-- Confidence Score -->
+                <div class="stat-box">
+                    <span class="stat-label">Confidence</span>
+                    <span class="stat-value">{{ confidence }}</span>
+                </div>
+            </div>
+
+            <!-- Mandatory Scientific Notice Section -->
+            <div class="notice-box">
+                <span class="notice-icon">ℹ️</span>
+                <div>
+                    <strong>Limitation Notice:</strong> The prediction reflects patterns learned by Random Forest from the labelled training dataset. The confidence score indicates the statistical confidence of the model and is not a guarantee of real-world factual certainty.
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Permanent Notice Box when no prediction is displayed yet -->
+        {% if not prediction %}
+        <div class="notice-box">
+            <span class="notice-icon">ℹ️</span>
+            <div>
+                <strong>Notice:</strong> The prediction reflects patterns learned by the model from the labelled training dataset. The confidence score represents statistical model confidence, not real-world factual certainty.
+            </div>
+        </div>
+        {% endif %}
+
+        <footer>
+            <p>Fake News Detection Flask Application &bull; NLP & Machine Learning Project</p>
+        </footer>
+    </div>
+
+    <!-- Frontend Interactive Enhancements -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const form = document.getElementById("news-form");
+            const btn = document.getElementById("analyze-btn");
+            const btnText = document.getElementById("btn-text");
+            const fileInput = document.getElementById("news_file");
+            const fileBadge = document.getElementById("file-selected-badge");
+
+            // Dynamic filename display on upload
+            if (fileInput && fileBadge) {
+                fileInput.addEventListener("change", () => {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        fileBadge.textContent = "Selected: " + fileInput.files[0].name;
+                        fileBadge.style.display = "inline-block";
+                    } else {
+                        fileBadge.textContent = "";
+                        fileBadge.style.display = "none";
+                    }
+                });
+            }
+
+            // Loading state on form submission without breaking standard form POST
+            if (form && btn) {
+                form.addEventListener("submit", (e) => {
+                    // Update button to visual loading state
+                    btn.classList.add("loading");
+                    btn.innerHTML = '<span class="spinner"></span> <span>Analyzing...</span>';
+                    // Delay disable slightly to allow browser form submission event to fire
+                    setTimeout(() => {
+                        btn.style.pointerEvents = "none";
+                    }, 50);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

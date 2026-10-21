@@ -47,8 +47,8 @@
                 </div>
                 <div class="summary-card-value">{{ summary.total }}</div>
                 <span class="summary-card-desc">
-                    {% if current_filter == 'Random Forest' %}
-                    Random Forest predictions
+                    {% if current_filter == active_model %}
+                    {{ active_model }} predictions
                     {% elif current_filter == 'All Models' %}
                     Across all recorded models
                     {% else %}
@@ -81,10 +81,10 @@
             <div class="summary-card card-models">
                 <div class="summary-card-header">
                     <span class="summary-card-label">Active Model</span>
-                    <span class="summary-card-icon">🌲</span>
+                    <span class="summary-card-icon">⚖️</span>
                 </div>
                 <div class="summary-card-value" style="color: var(--real-green); font-size: 1.65rem; padding-top: 0.35rem;">
-                    {{ active_model if active_model else 'Random Forest' }}
+                    {{ active_model if active_model else 'Naive Bayes' }}
                 </div>
                 <span class="summary-card-desc">Current production model</span>
             </div>
@@ -97,8 +97,8 @@
                     <h2>Saved Predictions</h2>
                     <span class="history-subtitle">
                         Showing {{ summary.total }} record{% if summary.total != 1 %}s{% endif %} &bull;
-                        {% if current_filter == 'Random Forest' %}
-                        Active Model (Random Forest)
+                        {% if current_filter == active_model %}
+                        Active Model ({{ active_model }})
                         {% elif current_filter == 'All Models' %}
                         All Historical Records
                         {% else %}
@@ -113,20 +113,20 @@
             <div class="history-filter-bar">
                 <span class="filter-label">Filter by Model:</span>
                 <div class="filter-pills">
-                    <a href="/history?model=Random+Forest" 
-                       class="filter-pill {% if current_filter == 'Random Forest' %}active{% endif %}">
-                        🌲 Random Forest (Active){% if model_counts and model_counts.get('Random Forest') is not none %} ({{ model_counts['Random Forest'] }}){% endif %}
+                    <a href="/history?model={{ active_model | urlencode }}" 
+                       class="filter-pill {% if current_filter == active_model %}active{% endif %}">
+                        ⚖️ {{ active_model }} (Active){% if model_counts and model_counts.get(active_model) is not none %} ({{ model_counts[active_model] }}){% endif %}
                     </a>
                     <a href="/history?model=all" 
                        class="filter-pill {% if current_filter == 'All Models' %}active{% endif %}">
                         📂 All Models{% if model_counts and model_counts.get('All Models') is not none %} ({{ model_counts['All Models'] }}){% endif %}
                     </a>
                     {% if model_counts %}
-                        {% for m_name in ['Logistic Regression', 'Naive Bayes', 'SVM', 'Historical prediction'] %}
-                            {% if model_counts.get(m_name, 0) > 0 %}
+                        {% for m_name in ['Random Forest', 'Logistic Regression', 'SVM', 'Historical prediction'] %}
+                            {% if m_name != active_model and model_counts.get(m_name, 0) > 0 %}
                             <a href="/history?model={{ m_name | urlencode }}" 
                                class="filter-pill {% if current_filter == m_name %}active{% endif %}">
-                                {{ m_name }} ({{ model_counts[m_name] }})
+                                {% if m_name == 'Random Forest' %}🌲 {% elif m_name == 'SVM' %}⚡ {% elif m_name == 'Logistic Regression' %}📈 {% endif %}{{ m_name }} ({{ model_counts[m_name] }})
                             </a>
                             {% endif %}
                         {% endfor %}
@@ -139,8 +139,8 @@
             <div class="empty-state">
                 <span class="empty-icon">📭</span>
                 <p class="empty-text">
-                    {% if current_filter == 'Random Forest' %}
-                    No predictions found for Random Forest yet. Analyze a news article on the Home page to start logging records.
+                    {% if current_filter == active_model %}
+                    No predictions found for {{ active_model }} yet. Analyze a news article on the Home page to start logging records.
                     {% else %}
                     No predictions recorded for {{ current_filter }}.
                     {% endif %}
@@ -178,8 +178,10 @@
                                 </div>
                             </td>
                             <td class="model-col">
-                                {% if row.model_display == 'Random Forest' %}
-                                <span class="badge-model active">🌲 Random Forest</span>
+                                {% if row.model_display == 'Naive Bayes' %}
+                                <span class="badge-model active">⚖️ Naive Bayes</span>
+                                {% elif row.model_display == 'Random Forest' %}
+                                <span class="badge-model">🌲 Random Forest</span>
                                 {% elif row.model_display == 'Historical prediction' %}
                                 <span class="badge-model historical">Historical prediction</span>
                                 {% else %}

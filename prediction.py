@@ -240,7 +240,7 @@ def calculate_confidence(model, features, predicted_class: int) -> float:
     return round(float(confidence_val), 2)
 
 
-def predict_news(news_text: str, model_name: str = "Random Forest"):
+def predict_news(news_text: str, model_name: str = "Naive Bayes"):
     """
     Main reusable inference function to classify news text.
 
@@ -256,7 +256,7 @@ def predict_news(news_text: str, model_name: str = "Random Forest"):
     Parameters:
         news_text (str): News article headline, text, or user input.
         model_name (str): Chosen model name ("Logistic Regression", "Naive Bayes",
-                          "Random Forest", "SVM"). Default is "Random Forest".
+                          "Random Forest", "SVM"). Default is "Naive Bayes".
 
     Returns:
         PredictionResult: Object supporting tuple unpacking, dict keys, and attributes:
@@ -325,12 +325,12 @@ def cli_test():
 
     # Prompt user for model choice
     try:
-        model_choice_input = input("\nSelect a model (1-4 or model name) [Default: SVM]: ").strip()
+        model_choice_input = input("\nSelect a model (1-4 or model name) [Default: Naive Bayes]: ").strip()
     except (EOFError, KeyboardInterrupt):
         model_choice_input = ""
 
     if not model_choice_input:
-        selected_model = "SVM"
+        selected_model = "Naive Bayes"
     elif model_choice_input.isdigit() and 1 <= int(model_choice_input) <= len(models):
         selected_model = models[int(model_choice_input) - 1]
     else:

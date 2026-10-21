@@ -75,9 +75,9 @@
             <div class="summary-card card-models">
                 <div class="summary-card-header">
                     <span class="summary-card-label">Active Model</span>
-                    <span class="summary-card-icon">🌲</span>
+                    <span class="summary-card-icon">⚖️</span>
                 </div>
-                <div class="summary-card-value" style="color: var(--real-green); font-size: 1.65rem; padding-top: 0.35rem;">{{ active_model if active_model else 'Random Forest' }}</div>
+                <div class="summary-card-value" style="color: var(--real-green); font-size: 1.65rem; padding-top: 0.35rem;">{{ active_model if active_model else 'Naive Bayes' }}</div>
                 <span class="summary-card-desc">Current production model</span>
             </div>
         </section>
@@ -101,17 +101,17 @@
                 </div>
             </div>
 
-            <!-- Chart 2: Random Forest Evaluation Metrics -->
+            <!-- Chart 2: Active Model Evaluation Metrics -->
             <div class="chart-card">
                 <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                    <h2 class="chart-card-title">Random Forest Evaluation Metrics</h2>
+                    <h2 class="chart-card-title">{{ active_model if active_model else 'Naive Bayes' }} Evaluation Metrics</h2>
                     <span class="model-badge" style="font-size: 0.78rem; padding: 0.2rem 0.55rem;">Test Set Evaluation</span>
                 </div>
                 <div class="chart-container-box">
                     <canvas id="rfMetricsChart"></canvas>
                 </div>
                 <p class="chart-caption">
-                    Performance measured on the project's held-out test dataset. These metrics do not guarantee the same performance on unseen real-world news.
+                    Performance measured on the project's held-out test dataset ({{ active_model if active_model else 'Naive Bayes' }}: {{ model_metrics['Accuracy'] if model_metrics and model_metrics.get('Accuracy') else (rf_metrics['Accuracy'] if rf_metrics and rf_metrics.get('Accuracy') else '93.32') }}% accuracy). These metrics do not guarantee the same performance on unseen real-world news.
                 </p>
             </div>
         </section>
@@ -185,11 +185,16 @@
                 }
             }
 
-            // Chart 2: Random Forest Evaluation Metrics Bar Chart
+            // Chart 2: Active Model Evaluation Metrics Bar Chart
             const ctxRfBar = document.getElementById('rfMetricsChart');
             if (ctxRfBar) {
                 const metricLabels = ['Accuracy', 'Precision', 'Recall', 'F1-score'];
-                const metricValues = [99.75, 99.69, 99.79, 99.74];
+                const metricValues = [
+                    {{ model_metrics['Accuracy'] if model_metrics and model_metrics.get('Accuracy') else (rf_metrics['Accuracy'] if rf_metrics and rf_metrics.get('Accuracy') else 93.32) }},
+                    {{ model_metrics['Precision'] if model_metrics and model_metrics.get('Precision') else (rf_metrics['Precision'] if rf_metrics and rf_metrics.get('Precision') else 93.28) }},
+                    {{ model_metrics['Recall'] if model_metrics and model_metrics.get('Recall') else (rf_metrics['Recall'] if rf_metrics and rf_metrics.get('Recall') else 92.60) }},
+                    {{ model_metrics['F1-score'] if model_metrics and model_metrics.get('F1-score') else (rf_metrics['F1-score'] if rf_metrics and rf_metrics.get('F1-score') else 92.94) }}
+                ];
 
                 new Chart(ctxRfBar, {
                     type: 'bar',
@@ -245,10 +250,10 @@
                                 }
                             },
                             y: {
-                                min: 90,
+                                min: 80,
                                 max: 100,
                                 ticks: {
-                                    stepSize: 2,
+                                    stepSize: 5,
                                     color: '#4B5563',
                                     callback: function(val) {
                                         return val + '%';
